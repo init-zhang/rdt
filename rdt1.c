@@ -24,15 +24,16 @@ void extract(const packet *pkt, uint8_t *data, size_t *len) {
     *len = pkt->len;
 }
 
-packet sender(const uint8_t *data, size_t len, states state) {
-    packet pkt = { .len = 0 };
+// Returns true if packet `pkt` should be sent, false otherwise.
+bool sender(const uint8_t *data, size_t len, states state, packet *pkt) {
     if (state == CALL_ABOVE) {
-        make_pkt(&pkt, data, len);
+        make_pkt(pkt, data, len);
+        return true;
     }
-    return pkt;
+    return false;
 }
 
-// Returns true if a response packet is produced (in resp), false otherwise.
+// Returns true if a response packet `resp` is produced, false otherwise.
 bool receiver(const packet *pkt, states state, uint8_t *data, size_t *len, packet *resp) {
     if (state == CALL_ABOVE) {
         if (!pkt) return false;
@@ -46,20 +47,23 @@ int main() {
     // Subtract 1 to remove NUL byte from string.
     // String is just used for convenient data creation.
     const size_t size = sizeof msg-1;
+    packet pkt;
 
     printf("== SENDER ==\n");
     // `%zu` is for size_t.
     printf("Sending %zu bytes: ", size);
     fwrite(msg, 1, size, stdout);
     printf("\n");
-    printf("============\n\n");
 
-    packet pkt = sender(msg, size, CALL_ABOVE);
+    bool send = sender(msg, size, CALL_ABOVE, &pkt);
+
+    printf("Send packet? %d\n", send);
+    printf("============\n\n");
 
     // Allocate memory on receiver side.
     uint8_t recv_buf[32];
     size_t recv_len = 0;
-    packet resp = { .len = 0 };
+    packet resp;
     bool has_resp = receiver(&pkt, CALL_ABOVE, recv_buf, &recv_len, &resp);
 
     printf("== RECEIVER ==\n");
