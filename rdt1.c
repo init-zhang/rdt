@@ -54,7 +54,7 @@ int main() {
     printf("\n");
     printf("============\n\n");
 
-    packet pkt = sender((const uint8_t *)msg, size, CALL_ABOVE);
+    packet pkt = sender(msg, size, CALL_ABOVE);
 
     // Allocate memory on receiver side.
     uint8_t recv_buf[32];
