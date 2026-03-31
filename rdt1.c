@@ -25,8 +25,8 @@ void extract(const packet *pkt, uint8_t *data, size_t *len) {
 }
 
 // Returns true if packet `pkt` should be sent, false otherwise.
-bool sender(const uint8_t *data, size_t len, states state, packet *pkt) {
-    if (state == CALL_ABOVE) {
+bool sender(const uint8_t *data, size_t len, states *state, packet *pkt) {
+    if (*state == CALL_ABOVE) {
         make_pkt(pkt, data, len);
         return true;
     }
@@ -34,8 +34,8 @@ bool sender(const uint8_t *data, size_t len, states state, packet *pkt) {
 }
 
 // Returns true if a response packet `resp` is produced, false otherwise.
-bool receiver(const packet *pkt, states state, uint8_t *data, size_t *len, packet *resp) {
-    if (state == CALL_ABOVE) {
+bool receiver(const packet *pkt, states *state, uint8_t *data, size_t *len, packet *resp) {
+    if (*state == CALL_BELOW) {
         if (!pkt) return false;
         extract(pkt, data, len);
     }
@@ -48,6 +48,7 @@ int main() {
     // String is just used for convenient data creation.
     const size_t size = sizeof msg-1;
     packet pkt;
+    states sender_state = CALL_ABOVE;
 
     printf("== SENDER ==\n");
     // `%zu` is for size_t.
@@ -55,16 +56,23 @@ int main() {
     fwrite(msg, 1, size, stdout);
     printf("\n");
 
-    bool send = sender(msg, size, CALL_ABOVE, &pkt);
+    bool send = sender(msg, size, &sender_state, &pkt);
 
     printf("Send packet? %d\n", send);
     printf("============\n\n");
+
+    if (!send) {
+        printf("End of connection.\n");
+        return 0;
+    }
 
     // Allocate memory on receiver side.
     uint8_t recv_buf[32];
     size_t recv_len = 0;
     packet resp;
-    bool has_resp = receiver(&pkt, CALL_ABOVE, recv_buf, &recv_len, &resp);
+    states receiver_state = CALL_BELOW;
+
+    bool has_resp = receiver(&pkt, &receiver_state, recv_buf, &recv_len, &resp);
 
     printf("== RECEIVER ==\n");
     printf("Receiver got %zu bytes: ", recv_len);
